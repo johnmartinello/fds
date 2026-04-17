@@ -1,0 +1,87 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage[margin=2cm]{geometry}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{2pt}
+\setlength{\parindent}{0pt}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
+
+\title{\vspace{-1.5em}Proposta de Pesquisa: Avaliação Empírica de Variantes de Multicast Atômico para \textit{Partitioned State Machine Replication}}
+\author{Agatha Schneider \and Fernando Vieira \and Gustavo Flores \and\\
+João Lucas Martinello de Oliveira \and Rodrigo Fehlauer Lauermann\\[2pt]
+\small Orientador: Prof. Fernando Dotti}
+\date{\vspace{-1em}}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\section{Apresentação do Artigo}
+\begin{itemize}
+    \item \textbf{Título:} \textit{Strengthening Atomic Multicast for Partitioned State Machine Replication}.
+    \item \textbf{Autores:} Leandro Pacheco (USI, Suíça), Fernando Dotti (PUCRS, Brasil), Fernando Pedone (USI, Suíça).
+    \item \textbf{Evento/Ano:} 11th Latin-American Symposium on Dependable Computing (LADC 2022), Fortaleza/CE, nov.\ 2022. Publicado pela ACM, 10p.
+    \item \textbf{DOI:} 10.1145/3569902.3569909 \quad \textbf{Link:} \url{https://dl.acm.org/doi/10.1145/3569902.3569909}.
+    \item \textbf{Citações:} 6 (Google Scholar, a revalidar próximo à entrega).
+\end{itemize}
+
+\section{Resumo do Artigo}
+\textbf{Problema.} Em \textit{partitioned state machine replication} (sharding + SMR), o multicast atômico é usado para propagar requisições entre partições. Porém, mesmo na sua forma mais forte da taxonomia de Hadzilacos \& Toueg (\textit{global total order} + \textit{prefix order}), o multicast atômico não garante linearizabilidade em cenários multi-partição: o artigo mostra, via um exemplo com \textit{inserts} e \textit{range queries} sobre duas partições (Fig.~2), uma execução em que a ordem observada pelos clientes viola a precedência de tempo real. Sistemas como S-SMR contornam isso com mensagens de sinalização ad-hoc entre partições.
+
+\textbf{Contribuição.} (i) Prova formal de que \textit{global total order} exige coordenação adicional para linearizabilidade. (ii) Nova propriedade \textit{atomic global order}, definida como uma relação $\prec$ acíclica que relaciona eventos de \textit{multicast} e \textit{deliver} em tempo real. (iii) Extensão do algoritmo de Skeen: após decidir o \textit{final timestamp} de $m$, cada destino envia um \textit{ack} aos demais e só entrega $m$ ao coletar todos os \textit{acks}, impedindo que novas mensagens recebam \textit{timestamp} menor a posteriori. (iv) Observa-se que a extensão é aplicável a descendentes do Skeen (FastCast, Scalatom, White-Box Atomic Multicast, RamCast, Byzcast) e que apenas o protocolo \textit{round-based} de Schiper \& Pedone (2008) já satisfaz a propriedade.
+
+\textbf{Resultados.} Puramente teóricos: provas de corretude, sem avaliação experimental. Essa lacuna empírica motiva diretamente o presente trabalho.
+
+\section{Objetivo e Metodologia}
+\textbf{Objetivo:} realizar um \textit{benchmark} comparativo entre variantes de multicast atômico usando um protótipo Java público (\url{https://github.com/elbatista/skeen/tree/master}), quantificando o custo de \textit{atomic global order}. Variantes comparadas: \textbf{(A)} Skeen clássico (\textit{baseline}); \textbf{(B)} Skeen estendido com \textit{atomic global order} (rotulado \textit{flex}); \textbf{(C)} variante bizantina no estilo Byzcast (rotulada \textit{byz}). \textit{Observação:} o servidor do protótipo, no estado atual, parece instanciar apenas o Skeen clássico; um passo inicial do trabalho será verificar e, se necessário, implementar a extensão \textit{flex} (adições do Algoritmo~1 do artigo) e integrar Byzcast.
+
+\textbf{Questões de pesquisa (preliminares):} (Q1) qual a ordem de grandeza do custo do \textit{ack} extra da propriedade \textit{atomic global order} frente ao Skeen clássico; (Q2) como esse custo se comporta ao variar a proporção de mensagens multi-partição; (Q3) como o comportamento dos algoritmos evolui ao variar o número de servidores e de clientes; (Q4) como a variante bizantina se posiciona em cenários comparáveis. As perguntas serão ajustadas conforme o amadurecimento do protótipo e dos experimentos iniciais.
+
+\textbf{Metodologia (linhas gerais):} (1) mapear o Algoritmo~1 do artigo sobre o código do protótipo e implementar eventuais lacunas; (2) compilar o projeto e executar rodadas iniciais de sanidade; (3) definir uma matriz experimental que varie o algoritmo (\textit{skeen}, \textit{flex}, \textit{byz}), o número de clientes e de servidores, a proporção de mensagens multi-partição (localidade) e a duração das execuções, com repetições suficientes para dar suporte estatístico aos resultados; (4) explorar mais de um tipo de carga, incluindo a carga TPC-C já embutida no protótipo e, quando viável, uma carga \textit{key-value} com \textit{range queries} inspirada na Fig.~2 do artigo; (5) executar em ambiente local para validação e, se disponível, em ambiente geo-distribuído (por exemplo, Cloudlab), com a alternativa de emular latência WAN por meio de ferramentas como \texttt{tc netem}; (6) coletar indicadores usuais de desempenho (\textit{throughput}, latência e custo de mensagens) apoiando-se nos \textit{scripts} de agregação e análise já fornecidos pelo protótipo, estendendo-os conforme a necessidade; (7) consolidar os resultados em visualizações comparativas e discutir o comportamento observado à luz da comunicação adicional prevista pelo Algoritmo~1. Os parâmetros exatos, o conjunto final de métricas e os cenários de comparação serão refinados ao longo dos experimentos iniciais, de modo que nenhum valor específico é fixado a priori nesta proposta.
+
+\section{Requisitos para Reprodução}
+\begin{center}\small
+\begin{tabular}{@{}p{4.8cm}p{2.4cm}p{8.8cm}@{}}
+\toprule
+\textbf{Requisito} & \textbf{Status} & \textbf{Observação} \\
+\midrule
+Artigo-base & Disponível & \url{https://dl.acm.org/doi/10.1145/3569902.3569909} \\
+Protótipo Java (código + \textit{scripts} + configs) & Disponível & \url{https://github.com/elbatista/skeen/tree/master} \\
+Cadeia de \textit{build} (JDK 8+, Apache Ant, Netty, Apache Commons CLI) & Disponível & Fornecida com o repositório; versões a documentar \\
+\textit{Workload} TPC-C & Disponível & Embutida no cliente do protótipo \\
+\textit{Workload} \textit{key-value} com \textit{range queries} & A recriar & Cliente mínimo análogo à Fig.~2 do artigo \\
+Variantes \textit{flex} e \textit{byz} no servidor & A verificar/implementar & Pode exigir implementação da extensão de \textit{atomic global order} e integração de Byzcast \\
+Ambiente Python para análise & A verificar & \texttt{requirements.txt} a consolidar (numpy, matplotlib, pandas) \\
+Ambiente geo-distribuído & A solicitar/emular & Cloudlab via orientador ou emulação WAN com \texttt{tc netem} \\
+Especificação TPC-C & Disponível & \url{http://www.tpc.org/tpcc/} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Impacto e Conexão com a Sociedade}
+Serviços críticos como bancos, Pix, prontuários eletrônicos, identidade digital, \textit{blockchains} permissionadas e bancos de dados em nuvem dependem de replicação particionada para escalar com tolerância a falhas. Sem uma propriedade como \textit{atomic global order}, cada requisição multi-partição carrega coordenação silenciosa adicional, que se traduz em mais \textit{round-trips}, maior latência ao usuário final e maior consumo energético em \textit{data centers}. Medir empiricamente esse custo permite que projetistas de sistemas sensíveis (transferências bancárias, autorizações em saúde, liquidação de títulos) decidam de forma informada se vale a pena adotar a extensão do Skeen proposta pelo artigo. Além disso, o trabalho aproxima o grupo da pesquisa de ponta produzida no Brasil, já que o artigo-base é coautorado pelo orientador da disciplina e apoiado por CNPq, FAPERGS e CAPES, e fortalece a capacidade do grupo de ler, criticar e reproduzir literatura de alto impacto em sistemas distribuídos.
+
+\section*{Referências principais}
+\vspace{-0.3em}
+\begin{itemize}\small
+\item Pacheco, L.; Dotti, F.; Pedone, F. \textit{Strengthening Atomic Multicast for Partitioned State Machine Replication.} LADC 2022, ACM. DOI: 10.1145/3569902.3569909.
+\item Birman, K.; Joseph, T. \textit{Reliable Communication in the Presence of Failures.} ACM TOCS 5(1), 1987. (Skeen.)
+\item Bezerra, C.; Pedone, F.; Van Renesse, R. \textit{Scalable State-Machine Replication.} DSN 2014. (S-SMR.)
+\item Coelho, P. et al. \textit{Byzantine Fault-Tolerant Atomic Multicast.} DSN 2018. (Byzcast.)
+\item Hadzilacos, V.; Toueg, S. \textit{A Modular Approach to Fault-Tolerant Broadcasts.} Cornell, 1994.
+\item Herlihy, M.; Wing, J. \textit{Linearizability.} ACM TOPLAS 12(3), 1990.
+\item Schiper, N.; Pedone, F. \textit{On the Inherent Cost of Atomic Broadcast and Multicast in WAN.} ICDCN 2008.
+\item Batista, E. R. L. \textit{Skeen: Prototype of a multicast Skeen implementation.} \url{https://github.com/elbatista/skeen/tree/master}.
+\item TPC Benchmark C. \url{http://www.tpc.org/tpcc/}.
+\end{itemize}
+
+\end{document}
